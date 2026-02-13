@@ -7,7 +7,20 @@ import (
 	"strings"
 )
 
+type cliCommand struct {
+	name        string
+	description string
+	callback    func() error
+}
+
+var callback_registry map[string]cliCommand
+
 func main() {
+	callback_registry = map[string]cliCommand{
+		"exit": {name: "exit", description: "Exit the Pokedex", callback: commandExit},
+		"help": {name: "help", description: "Displays a help message", callback: commandHelp},
+	}
+
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -26,7 +39,34 @@ func main() {
 			continue
 		} else {
 			command := word_list[0]
-			fmt.Printf("Your command was: %s\n", command)
+			req_callback, ok := callback_registry[command]
+			if !ok {
+				fmt.Println("Unknown command")
+				continue
+			} else {
+				err := req_callback.callback()
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
 		}
 	}
+}
+
+func commandExit() error {
+	fmt.Println("Closing the Pokedex... Goodbye!")
+	os.Exit(0)
+	return nil
+}
+
+func commandHelp() error {
+	fmt.Println("Welcome to the Pokedex!")
+	fmt.Println("Usage:")
+	fmt.Println("")
+	keys := []string{"help", "exit"}
+	for _, k := range keys {
+		cmd := callback_registry[k]
+		fmt.Printf("%s: %s\n", cmd.name, cmd.description)
+	}
+	return nil
 }
