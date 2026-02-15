@@ -7,20 +7,36 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/cybergrim/bootdev_pokedex/internal/pokecache"
 )
 
 type Client struct {
 	httpClient http.Client
+	pCache     *pokecache.Cache
 }
 
 func NewClient(timeout time.Duration) *Client {
-	return &Client{httpClient: http.Client{Timeout: timeout}}
+	interval := 5
+	return &Client{
+		httpClient: http.Client{Timeout: timeout},
+		pCache:     pokecache.NewCache(time.Duration(interval) * time.Minute),
+	}
 }
 
 func (c *Client) ListLocationAreas(pageURL *string) (LocationArea, error) {
 	initialURL := "https://pokeapi.co/api/v2/location-area/"
 	if pageURL != nil {
 		initialURL = *pageURL
+	}
+
+	result, exist := c.pCache.Get(initialURL)
+	if exist {
+		var out LocationArea
+		if err := json.Unmarshal(result, &out); err != nil {
+			return LocationArea{}, err
+		}
+		return out, nil
 	}
 
 	req, err := http.NewRequest("GET", initialURL, nil)
@@ -42,6 +58,8 @@ func (c *Client) ListLocationAreas(pageURL *string) (LocationArea, error) {
 	if err != nil {
 		return LocationArea{}, err
 	}
+
+	c.pCache.Add(initialURL, b)
 
 	var out LocationArea
 	if err := json.Unmarshal(b, &out); err != nil {
