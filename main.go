@@ -13,7 +13,7 @@ import (
 type cliCommand struct {
 	name        string
 	description string
-	callback    func(*config) error
+	callback    func(*config, []string) error
 }
 
 type config struct {
@@ -31,10 +31,11 @@ func main() {
 		api:     pokeapi.NewClient(5 * time.Second),
 	}
 	callback_registry = map[string]cliCommand{
-		"map":  {name: "map", description: "Go forward on the Pokemon World Map - 20 results", callback: commandMap},
-		"mapb": {name: "mapb", description: "Go backwards on the Pokemon World Map - 20 results", callback: commandMapb},
-		"exit": {name: "exit", description: "Exit the Pokedex", callback: commandExit},
-		"help": {name: "help", description: "Displays a help message", callback: commandHelp},
+		"map":     {name: "map", description: "Go forward on the Pokemon World Map - 20 results", callback: commandMap},
+		"mapb":    {name: "mapb", description: "Go backwards on the Pokemon World Map - 20 results", callback: commandMapb},
+		"explore": {name: "explore", description: "Explore a particular area - eg. `explore <area>`", callback: commandExplore},
+		"exit":    {name: "exit", description: "Exit the Pokedex", callback: commandExit},
+		"help":    {name: "help", description: "Displays a help message", callback: commandHelp},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -55,12 +56,13 @@ func main() {
 			continue
 		} else {
 			command := word_list[0]
+			area := word_list[1:]
 			req_callback, ok := callback_registry[command]
 			if !ok {
 				fmt.Println("Unknown command")
 				continue
 			} else {
-				err := req_callback.callback(cfg)
+				err := req_callback.callback(cfg, area)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -69,14 +71,14 @@ func main() {
 	}
 }
 
-func commandMap(cfg *config) error {
+func commandMap(cfg *config, area []string) error {
 	if cfg.nextURL == nil {
 		return fmt.Errorf("you are on the last page")
 	}
 	return fetchAndPrintLocations(cfg, *cfg.nextURL)
 }
 
-func commandMapb(cfg *config) error {
+func commandMapb(cfg *config, area []string) error {
 	if cfg.prevURL == nil {
 		return fmt.Errorf("you are on the first page")
 	}
@@ -97,13 +99,30 @@ func fetchAndPrintLocations(cfg *config, url string) error {
 	return nil
 }
 
-func commandExit(cfg *config) error {
+func commandExplore(cfg *config, area []string) error {
+	if len(area) == 0 {
+		return fmt.Errorf("you must provide a location name")
+	}
+	locationName := area[0]
+	res, err := cfg.api.ExploreLocation(locationName)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Exploring %s...\n", locationName)
+	fmt.Println("Found Pokemon:")
+	for _, pokemon := range res.PokemonEncounters {
+		fmt.Printf(" - %s\n", pokemon.Pokemon.Name)
+	}
+	return nil
+}
+
+func commandExit(cfg *config, area []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, area []string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")

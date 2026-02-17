@@ -67,3 +67,44 @@ func (c *Client) ListLocationAreas(pageURL *string) (LocationArea, error) {
 	}
 	return out, nil
 }
+
+func (c *Client) ExploreLocation(area string) (ExplorationArea, error) {
+	baseURL := "https://pokeapi.co/api/v2/location-area/"
+	finalURL := baseURL + area
+	result, exist := c.pCache.Get(finalURL)
+	if exist {
+		var out ExplorationArea
+		if err := json.Unmarshal(result, &out); err != nil {
+			return ExplorationArea{}, err
+		}
+		return out, nil
+	}
+
+	req, err := http.NewRequest("GET", finalURL, nil)
+	if err != nil {
+		return ExplorationArea{}, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return ExplorationArea{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return ExplorationArea{}, fmt.Errorf("pokeapi error: %s: %s", resp.Status, string(b))
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return ExplorationArea{}, err
+	}
+
+	c.pCache.Add(finalURL, b)
+
+	var out ExplorationArea
+	if err := json.Unmarshal(b, &out); err != nil {
+		return ExplorationArea{}, err
+	}
+	return out, nil
+}
