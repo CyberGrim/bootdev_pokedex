@@ -108,3 +108,44 @@ func (c *Client) ExploreLocation(area string) (ExplorationArea, error) {
 	}
 	return out, nil
 }
+
+func (c *Client) GetPokemonInfo(pokemon string) (PokemonInfo, error) {
+	baseURL := "https://pokeapi.co/api/v2/pokemon/"
+	finalURL := baseURL + pokemon
+	result, exist := c.pCache.Get(finalURL)
+	if exist {
+		var out PokemonInfo
+		if err := json.Unmarshal(result, &out); err != nil {
+			return PokemonInfo{}, err
+		}
+		return out, nil
+	}
+
+	req, err := http.NewRequest("GET", finalURL, nil)
+	if err != nil {
+		return PokemonInfo{}, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return PokemonInfo{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return PokemonInfo{}, fmt.Errorf("pokeapi error: %s: %s", resp.Status, string(b))
+	}
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return PokemonInfo{}, err
+	}
+
+	c.pCache.Add(finalURL, b)
+
+	var out PokemonInfo
+	if err := json.Unmarshal(b, &out); err != nil {
+		return PokemonInfo{}, err
+	}
+	return out, nil
+}
