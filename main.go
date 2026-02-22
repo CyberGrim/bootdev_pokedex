@@ -106,7 +106,7 @@ func fetchAndPrintLocations(cfg *config, url string) error {
 }
 
 func commandPokedex(cfg *config, notNeeded []string) error {
-	fmt.Println("Your Pokedex::")
+	fmt.Println("Your Pokedex:")
 	for _, entry := range cfg.pokedex {
 		fmt.Printf(" - %s\n", entry.Name)
 	}
