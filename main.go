@@ -36,6 +36,7 @@ func main() {
 	callback_registry = map[string]cliCommand{
 		"map":     {name: "map", description: "Go forward on the Pokemon World Map - 20 results", callback: commandMap},
 		"mapb":    {name: "mapb", description: "Go backwards on the Pokemon World Map - 20 results", callback: commandMapb},
+		"pokedex": {name: "pokedex", description: "List the Pokemon currently caught`", callback: commandPokedex},
 		"catch":   {name: "catch", description: "Catch a particular Pokemon - eg. `catch <Pokemon>`", callback: commandCatch},
 		"inspect": {name: "inspect", description: "Inspect a particular Pokemon - eg. `inspect <Pokemon>`", callback: commandInspect},
 		"explore": {name: "explore", description: "Explore a particular area - eg. `explore <area>`", callback: commandExplore},
@@ -76,14 +77,14 @@ func main() {
 	}
 }
 
-func commandMap(cfg *config, area []string) error {
+func commandMap(cfg *config, notNeeded []string) error {
 	if cfg.nextURL == nil {
 		return fmt.Errorf("you are on the last page")
 	}
 	return fetchAndPrintLocations(cfg, *cfg.nextURL)
 }
 
-func commandMapb(cfg *config, area []string) error {
+func commandMapb(cfg *config, notNeeded []string) error {
 	if cfg.prevURL == nil {
 		return fmt.Errorf("you are on the first page")
 	}
@@ -104,6 +105,14 @@ func fetchAndPrintLocations(cfg *config, url string) error {
 	return nil
 }
 
+func commandPokedex(cfg *config, notNeeded []string) error {
+	fmt.Println("Your Pokedex::")
+	for _, entry := range cfg.pokedex {
+		fmt.Printf(" - %s\n", entry.Name)
+	}
+	return nil
+}
+
 func commandCatch(cfg *config, pokemon []string) error {
 	if len(pokemon) == 0 {
 		return fmt.Errorf("you must provide the name of a Pokemon")
@@ -120,6 +129,7 @@ func commandCatch(cfg *config, pokemon []string) error {
 		fmt.Printf("%s escaped!\n", pokemonName)
 	} else {
 		fmt.Printf("%s was caught!\n", pokemonName)
+		fmt.Println("You may now inspect it with the inspect command.")
 		cfg.pokedex[pokemonName] = res
 	}
 
@@ -164,13 +174,13 @@ func commandExplore(cfg *config, area []string) error {
 	return nil
 }
 
-func commandExit(cfg *config, area []string) error {
+func commandExit(cfg *config, notNeeded []string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cfg *config, area []string) error {
+func commandHelp(cfg *config, notNeeded []string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")
